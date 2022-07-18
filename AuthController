@@ -1,0 +1,133 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using RegisterAPIApplication.Model;
+using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
+
+
+namespace TokenTest.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class EmployeeController : ControllerBase
+    {
+        private readonly IConfiguration _configuration;
+
+        private readonly ApplicationDbContext dbContext;
+
+        public EmployeeController(IConfiguration configuration, ApplicationDbContext dbContext)
+        {
+            _configuration = configuration;
+            this.dbContext = dbContext;
+        }
+
+        [HttpGet]
+        [Route("get/data")]
+        public List<User> get()
+        {
+
+            var res = dbContext.users.ToList();
+
+
+            return res;
+
+        }
+
+   
+
+        [HttpPost("register")]
+        public async Task<ActionResult<User>> Register(UserRegister Request)
+        {
+            User uu = new User();
+
+            CreatePasswordHash(Request.Password, out byte[] PasswordHash, out byte[] PasswordSault);
+            uu.UserName = Request.UserName;
+            uu.PasswordHash = PasswordHash;
+            uu.PasswordSault = PasswordSault;
+
+            dbContext.users.Add(uu);
+            dbContext.SaveChanges();
+
+            return Ok(uu);
+        }
+
+        [HttpPost("Login")]
+        public async Task<ActionResult<string>> Login(UserRegister request)
+        {
+
+            var res = dbContext.users.Where(n => n.UserName == request.UserName).FirstOrDefault();
+
+          
+
+            if (res.UserName != request.UserName)
+            {
+                return BadRequest("user not found");
+            }
+
+            if (!VerifyPasswordhash(request.Password, res.PasswordHash, res.PasswordSault))
+            {
+                return BadRequest("wrong password");
+            }
+
+            string token = CreateToken(res);
+
+            return Ok(token);
+        }
+
+        // Create Token
+        private string CreateToken(User user)
+        {
+           
+
+            List<Claim> claims = new List<Claim>
+            {
+           
+                new Claim(ClaimTypes.Name, user.UserName)
+            };
+
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_configuration.GetSection("AppSettings:Token").Value));
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddDays(1),
+                signingCredentials: cred);
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+
+            return jwt;
+        }
+
+        //create password-
+        private void CreatePasswordHash(string Password, out byte[] PasswordHash, out byte[] PasswordSault)
+        {
+            using (var hmac = new HMACSHA512())
+            {
+                PasswordSault = hmac.Key;
+                PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(Password));
+
+            }
+        }
+
+
+        //Create password-
+        private bool VerifyPasswordhash(string password, byte[] PasswordHash, byte[] PasswordSault)
+        {
+            using (var hmac = new HMACSHA512(PasswordSault))
+            {
+                var computeHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+
+                return computeHash.SequenceEqual(PasswordHash);
+
+            }
+
+        }
+    }
+}
