@@ -1,0 +1,14 @@
+{
+  "AppSettings": {
+    "Token": "my top tokens and i doo job"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": { "thakur": "Data Source=CHETUIWK2062\\MSSSQL2019;Initial Catalog=WebApi;Integrated Security=True;Pooling=False" }
+}
