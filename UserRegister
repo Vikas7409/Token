@@ -6,15 +6,13 @@ using System.Threading.Tasks;
 
 namespace RegisterAPIApplication.Model
 {
-    public class User
+    public class UserRegister
     {
         [Key]
         public int Id { get; set; }
 
         public string UserName { get; set; } = String.Empty;
 
-        public byte[] PasswordHash { get; set; }
-
-        public byte[] PasswordSault { get; set; }
+        public string Password { get; set; } = String.Empty;
     }
 }
